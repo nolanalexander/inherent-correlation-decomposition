@@ -1,0 +1,91 @@
+# Project Parameters
+# This file stores directories, filenames, and other configuration parameters
+
+# Core parameters (for risk_calc.py compatibility)
+core:
+  use_rank_corr: false
+  position_dir: ""
+  position_pnl_file: ""
+
+# Additional parameters from pysrc/params.yaml for compatibility
+roll_days_before: 5
+
+# Base directory
+base_dir: "."
+
+# Directory structure
+data_dir: "data"
+data_raw_dir: "raw"
+data_preprocessed_dir: "preprocessed"
+data_processed_dir: "processed"
+plots_dir: "plots"
+log_dir: "log"
+documentation_dir: "documentation"
+papers_dir: "papers"
+
+# Output subdirectories
+rc_decomp_subdir: "rc_decomp"
+
+# Data files
+price_data_file: "ivc_prices.csv"
+
+# Risk calculation parameters
+risk_params:
+  alpha: 0.99
+  lookback: 126
+  leverage: 10
+  roll_code: "N:05_0_R"
+
+# Asset configuration
+tickers:
+  - "CL1 {roll_code} Comdty"
+  - "NG1 {roll_code} Comdty"
+  - "C 1 {roll_code} Comdty"
+  - "ES1 {roll_code} Index"
+  - "CF1 {roll_code} Index"
+  - "XU1 {roll_code} Index"
+  - "TY1 {roll_code} Comdty"
+  - "RX1 {roll_code} Comdty"
+  - "XM1 {roll_code} Comdty"
+  - "CADUSD Curncy"
+  - "EURUSD Curncy"
+  - "JPYUSD Curncy"
+
+# Portfolio weights
+weights:
+  CL1_Comdty: -0.05
+  NG1_Comdty: 0.05
+  C_1_Comdty: -0.1
+  ES1_Index: 0.05
+  CF1_Index: -0.2
+  XU1_Index: 0.1
+  TY1_Comdty: 0.9
+  RX1_Comdty: -0.9
+  XM1_Comdty: 0.8
+  CADUSD_Curncy: 0.1
+  EURUSD_Curncy: 0.15
+  JPYUSD_Curncy: 0.1
+
+# Asset classes
+asset_classes:
+  CL1_Comdty: "Commodity"
+  NG1_Comdty: "Commodity"
+  C_1_Comdty: "Commodity"
+  ES1_Index: "Equity"
+  CF1_Index: "Equity"
+  XU1_Index: "Equity"
+  TY1_Comdty: "Fixed Income"
+  RX1_Comdty: "Fixed Income"
+  XM1_Comdty: "Fixed Income"
+  CADUSD_Curncy: "FX"
+  EURUSD_Curncy: "FX"
+  JPYUSD_Curncy: "FX"
+
+# Figure generation parameters
+figure_params:
+  dpi: 300
+  bbox_inches: "tight"
+  convergence_samples: 500
+  convergence_dim: 5
+  convergence_corr: 0.75
+  calc_freq_days: 5  # Calculate RC decomposition every N days for efficiency
