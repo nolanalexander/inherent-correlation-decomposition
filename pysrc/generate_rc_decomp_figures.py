@@ -134,7 +134,7 @@ try:
         alpha=alpha,
         yesterday_price_only=False,
         use_dv01_pnl_approx=False,
-        risk_column_names=['ivol_lag_adj'],
+        risk_column_names=['rc_lag_adj'],
         agg_col=None,
         save_table=False,
         hist_calc_freq_days=1,
@@ -146,7 +146,7 @@ try:
     logging.info(f"LS risk history shape: {risk_hist_df_ls.shape}")
 
     logging.info("Calculating risk history for Eq portfolio...")
-    risk_hist_df_eq = rmh.get_risk_metrics_history_cur_pos(
+    risk_hist_df_eq = rmh.get_risk_metrics_cur_pos(
         rets_df_stacked_by_weight['Eq'],
         pd.to_datetime('1990-01-01') + pd.offsets.BDay(70),
         end_date=rets_df.index.max(),
@@ -155,7 +155,7 @@ try:
         alpha=alpha,
         yesterday_price_only=False,
         use_dv01_pnl_approx=False,
-        risk_column_names=['ivol_lag_adj'],
+        risk_column_names=['rc_lag_adj'],
         agg_col=None,
         save_table=False,
         hist_calc_freq_days=1,
@@ -167,7 +167,7 @@ try:
     logging.info(f"Eq risk history shape: {risk_hist_df_eq.shape}")
 
     logging.info("Calculating risk history for RP portfolio...")
-    risk_hist_df_rp = rmh.get_risk_metrics_history_cur_pos(
+    risk_hist_df_rp = rmh.get_risk_metrics_cur_pos(
         rets_df_stacked_by_weight['RP'],
         pd.to_datetime('1990-01-01') + pd.offsets.BDay(70),
         end_date=rets_df.index.max(),
@@ -176,7 +176,7 @@ try:
         alpha=alpha,
         yesterday_price_only=False,
         use_dv01_pnl_approx=False,
-        risk_column_names=['ivol_lag_adj'],
+        risk_column_names=['rc_lag_adj'],
         agg_col=None,
         save_table=False,
         hist_calc_freq_days=1,
@@ -187,24 +187,24 @@ try:
     )
     logging.info(f"RP risk history shape: {risk_hist_df_rp.shape}")
 
-    # Prepare ICD distribution data
+    # Prepare RC distribution data
     logging.info("Preparing RC distribution data...")
-    ivol_dist_lag_adj_df_stacked = risk_hist_df_ls[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['ivol_lag_adj'].copy()
-    ivol_dist_lag_adj_df = ivol_dist_lag_adj_df_stacked.unstack(['asset_class', 'ticker'], sort=False)
-    asset_class_ivol_dist_lag_adj_df_stacked = risk_hist_df_ls[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].groupby(['asset_class', 'date'], sort=False)['ivol_lag_adj'].sum().copy()
-    asset_class_ivol_dist_lag_adj_df = asset_class_ivol_dist_lag_adj_df_stacked.unstack('asset_class', sort=False)
+    rc_dist_lag_adj_df_stacked = risk_hist_df_ls[['asset_class', 'ticker', 'date', 'rc_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['rc_lag_adj'].copy()
+    rc_dist_lag_adj_df = rc_dist_lag_adj_df_stacked.unstack(['asset_class', 'ticker'], sort=False)
+    asset_class_rc_dist_lag_adj_df_stacked = risk_hist_df_ls[['asset_class', 'ticker', 'date', 'rc_lag_adj']].groupby(['asset_class', 'date'], sort=False)['rc_lag_adj'].sum().copy()
+    asset_class_rc_dist_lag_adj_df = asset_class_rc_dist_lag_adj_df_stacked.unstack('asset_class', sort=False)
 
     # Equal weight
-    ivol_dist_lag_adj_df_stacked_eq = risk_hist_df_eq[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['ivol_lag_adj'].copy()
-    ivol_dist_lag_adj_df_eq = ivol_dist_lag_adj_df_stacked_eq.unstack(['asset_class', 'ticker'], sort=False)
-    asset_class_ivol_dist_lag_adj_df_stacked_eq = risk_hist_df_eq[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].groupby(['asset_class', 'date'], sort=False)['ivol_lag_adj'].sum().copy()
-    asset_class_ivol_dist_lag_adj_df_eq = asset_class_ivol_dist_lag_adj_df_stacked_eq.unstack('asset_class', sort=False)
+    rc_dist_lag_adj_df_stacked_eq = risk_hist_df_eq[['asset_class', 'ticker', 'date', 'rc_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['rc_lag_adj'].copy()
+    rc_dist_lag_adj_df_eq = rc_dist_lag_adj_df_stacked_eq.unstack(['asset_class', 'ticker'], sort=False)
+    asset_class_rc_dist_lag_adj_df_stacked_eq = risk_hist_df_eq[['asset_class', 'ticker', 'date', 'rc_lag_adj']].groupby(['asset_class', 'date'], sort=False)['rc_lag_adj'].sum().copy()
+    asset_class_rc_dist_lag_adj_df_eq = asset_class_rc_dist_lag_adj_df_stacked_eq.unstack('asset_class', sort=False)
 
     # Risk parity
-    ivol_dist_lag_adj_df_stacked_rp = risk_hist_df_rp[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['ivol_lag_adj'].copy()
-    ivol_dist_lag_adj_df_rp = ivol_dist_lag_adj_df_stacked_rp.unstack(['asset_class', 'ticker'], sort=False)
-    asset_class_ivol_dist_lag_adj_df_stacked_rp = risk_hist_df_rp[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].groupby(['asset_class', 'date'], sort=False)['ivol_lag_adj'].sum().copy()
-    asset_class_ivol_dist_lag_adj_df_rp = asset_class_ivol_dist_lag_adj_df_stacked_rp.unstack('asset_class', sort=False)
+    rc_dist_lag_adj_df_stacked_rp = risk_hist_df_rp[['asset_class', 'ticker', 'date', 'rc_lag_adj']].set_index(['asset_class', 'ticker', 'date'])['rc_lag_adj'].copy()
+    rc_dist_lag_adj_df_rp = rc_dist_lag_adj_df_stacked_rp.unstack(['asset_class', 'ticker'], sort=False)
+    asset_class_rc_dist_lag_adj_df_stacked_rp = risk_hist_df_rp[['asset_class', 'ticker', 'date', 'rc_lag_adj']].groupby(['asset_class', 'date'], sort=False)['rc_lag_adj'].sum().copy()
+    asset_class_rc_dist_lag_adj_df_rp = asset_class_rc_dist_lag_adj_df_stacked_rp.unstack('asset_class', sort=False)
 
     # Calculate RC decomposition for all portfolios
     logging.info("Calculating RC decomposition for all portfolios...")
@@ -212,7 +212,7 @@ try:
     # LS Portfolio decomposition
     ls_rets_df = rets_df_stacked_by_weight['LS']['weighted_return'].unstack(['asset_class', 'ticker'])
     ls_rets_df_lookback = ls_rets_df.iloc[-lookback:].copy()
-    icd_inher_srs_ls, icd_corr_srs_ls = rc.get_additive_ivol_parts(ls_rets_df_lookback, alpha=alpha, lag_adj=True)
+    icd_inher_srs_ls, icd_corr_srs_ls = rc.get_rc_parts(ls_rets_df_lookback, alpha=alpha, lag_adj=True)
     icd_parts_df_ls = pd.DataFrame({
         'Inherent RC': icd_inher_srs_ls,
         'Correlation RC': icd_corr_srs_ls,
@@ -224,7 +224,7 @@ try:
     # Eq Portfolio decomposition
     eq_rets_df = rets_df_stacked_by_weight['Eq']['weighted_return'].unstack(['asset_class', 'ticker'])
     eq_rets_df_lookback = eq_rets_df.iloc[-lookback:].copy()
-    icd_inher_srs_eq, icd_corr_srs_eq = rc.get_additive_ivol_parts(eq_rets_df_lookback, alpha=alpha, lag_adj=True)
+    icd_inher_srs_eq, icd_corr_srs_eq = rc.get_rc_parts(eq_rets_df_lookback, alpha=alpha, lag_adj=True)
     icd_parts_df_eq = pd.DataFrame({
         'Inherent RC': icd_inher_srs_eq,
         'Correlation RC': icd_corr_srs_eq,
@@ -236,7 +236,7 @@ try:
     # RP Portfolio decomposition
     rp_rets_df = rets_df_stacked_by_weight['RP']['weighted_return'].unstack(['asset_class', 'ticker'])
     rp_rets_df_lookback = rp_rets_df.iloc[-lookback:].copy()
-    icd_inher_srs_rp, icd_corr_srs_rp = rc.get_additive_ivol_parts(rp_rets_df_lookback, alpha=alpha, lag_adj=True)
+    icd_inher_srs_rp, icd_corr_srs_rp = rc.get_rc_parts(rp_rets_df_lookback, alpha=alpha, lag_adj=True)
     icd_parts_df_rp = pd.DataFrame({
         'Inherent RC': icd_inher_srs_rp,
         'Correlation RC': icd_corr_srs_rp,
@@ -280,11 +280,11 @@ try:
         cur_full_samp_df = full_samp_df.iloc[:i]
         try:
             # RC using additive method (matching notebook)
-            cur_rc = rc.get_additive_ivol(cur_full_samp_df, alpha=1)
+            cur_rc = rc.get_rc(cur_full_samp_df, alpha=1)
             rc_conv_df.loc[i] = cur_rc
 
             # Decomposition into inherent and correlation
-            cur_inher, cur_corr = rc.get_additive_ivol_parts(cur_full_samp_df, alpha=1, lag_adj=False)
+            cur_inher, cur_corr = rc.get_rc_parts(cur_full_samp_df, alpha=1, lag_adj=False)
             inherent_conv_df.loc[i] = pd.Series(cur_inher).values
             correlation_conv_df.loc[i] = pd.Series(cur_corr).values
         except:
@@ -394,16 +394,16 @@ try:
     logging.info("Generating Figure 4 (Individual Asset RC History)...")
 
     fig, ax = plt.subplots(figsize=(12, 7))
-    ivol_dist_lag_adj_df_pct = ivol_dist_lag_adj_df.droplevel('asset_class', axis=1) * 100
+    rc_dist_lag_adj_df_pct = rc_dist_lag_adj_df.droplevel('asset_class', axis=1) * 100
 
-    for col in ivol_dist_lag_adj_df_pct.columns:
-        ax.plot(ivol_dist_lag_adj_df_pct.index, ivol_dist_lag_adj_df_pct[col], label=col, alpha=0.7)
+    for col in rc_dist_lag_adj_df_pct.columns:
+        ax.plot(rc_dist_lag_adj_df_pct.index, rc_dist_lag_adj_df_pct[col], label=col, alpha=0.7)
 
     ax.set_xlabel('Date', fontsize=12)
     ax.set_ylabel('RC (%)', fontsize=12)
     ax.set_title('Risk Contribution by Asset Over Time', fontsize=14, fontweight='bold')
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
-    ax.set_xlim(ivol_dist_lag_adj_df_pct.index.min(), ivol_dist_lag_adj_df_pct.index.max())
+    ax.set_xlim(rc_dist_lag_adj_df_pct.index.min(), rc_dist_lag_adj_df_pct.index.max())
     ax.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'ls_rc_history.png'), dpi=300, bbox_inches='tight')
@@ -447,7 +447,7 @@ try:
 
             try:
                 # Calculate decomposition
-                icd_inher, icd_corr = rc.get_additive_ivol_parts(rets_window, alpha=alpha, lag_adj=True)
+                icd_inher, icd_corr = rc.get_rc_parts(rets_window, alpha=alpha, lag_adj=True)
 
                 # Aggregate by asset class
                 icd_inher_by_class = pd.Series(icd_inher).groupby(level='asset_class').sum()
@@ -480,7 +480,7 @@ try:
         logging.info(f"Generating Figure {fig_num} ({port_name} Portfolio)...")
 
         # Calculate RC by asset class over time
-        asset_class_rc = risk_hist_df[['asset_class', 'ticker', 'date', 'ivol_lag_adj']].groupby(['asset_class', 'date'], sort=False)['ivol_lag_adj'].sum().copy()
+        asset_class_rc = risk_hist_df[['asset_class', 'ticker', 'date', 'rc_lag_adj']].groupby(['asset_class', 'date'], sort=False)['rc_lag_adj'].sum().copy()
         asset_class_rc_df = asset_class_rc.unstack('asset_class', sort=False) * 100
 
         # Calculate decomposition history
@@ -560,8 +560,8 @@ try:
     last_date = rets_df.index.max()
 
     # LS RC
-    ls_rc_last = risk_hist_df_ls[risk_hist_df_ls['date'] == last_date][['asset_class', 'ticker', 'ivol_lag_adj']].copy()
-    ls_rc_last = ls_rc_last.rename(columns={'ivol_lag_adj': 'LS RC'})
+    ls_rc_last = risk_hist_df_ls[risk_hist_df_ls['date'] == last_date][['asset_class', 'ticker', 'rc_lag_adj']].copy()
+    ls_rc_last = ls_rc_last.rename(columns={'rc_lag_adj': 'LS RC'})
     ls_rc_last['LS RC'] = ls_rc_last['LS RC'] * 100
 
     # Add LS Inherent and Correlation RC from decomposition
@@ -570,8 +570,8 @@ try:
     ls_rc_last = ls_rc_last.merge(ls_decomp[['ticker', 'LS Inh', 'LS Corr']], on='ticker')
 
     # Eq RC
-    eq_rc_last = risk_hist_df_eq[risk_hist_df_eq['date'] == last_date][['asset_class', 'ticker', 'ivol_lag_adj']].copy()
-    eq_rc_last = eq_rc_last.rename(columns={'ivol_lag_adj': 'Eq RC'})
+    eq_rc_last = risk_hist_df_eq[risk_hist_df_eq['date'] == last_date][['asset_class', 'ticker', 'rc_lag_adj']].copy()
+    eq_rc_last = eq_rc_last.rename(columns={'rc_lag_adj': 'Eq RC'})
     eq_rc_last['Eq RC'] = eq_rc_last['Eq RC'] * 100
 
     # Add Eq Inherent and Correlation RC from decomposition
@@ -580,8 +580,8 @@ try:
     eq_rc_last = eq_rc_last.merge(eq_decomp[['ticker', 'Eq Inh', 'Eq Corr']], on='ticker')
 
     # RP RC
-    rp_rc_last = risk_hist_df_rp[risk_hist_df_rp['date'] == last_date][['asset_class', 'ticker', 'ivol_lag_adj']].copy()
-    rp_rc_last = rp_rc_last.rename(columns={'ivol_lag_adj': 'RP RC'})
+    rp_rc_last = risk_hist_df_rp[risk_hist_df_rp['date'] == last_date][['asset_class', 'ticker', 'rc_lag_adj']].copy()
+    rp_rc_last = rp_rc_last.rename(columns={'rc_lag_adj': 'RP RC'})
     rp_rc_last['RP RC'] = rp_rc_last['RP RC'] * 100
 
     # Add RP Inherent and Correlation RC from decomposition
@@ -639,11 +639,12 @@ try:
         'Correlation RC': 'Corr. RC'
     })
 
-    # Add iVol (approximate as RC for this example since they're similar)
-    rc_comparison['iVol'] = rc_comparison['RC']
-
-    # Add Risk Contribution (same as RC)
-    rc_comparison['Risk Contribution'] = rc_comparison['RC']
+    # Compute non-additive iVol (paper eq. 1) per asset for the LS portfolio.
+    # iVol(a) = sigma_p - sigma_{p\{a}}; it does NOT sum to portfolio volatility,
+    # so its values differ from the additive RC computed above.
+    ivol_srs_ls = rc.get_ivol(ls_rets_df_lookback, alpha=alpha, lag_adj=True) * 100
+    ivol_by_ticker = ivol_srs_ls.droplevel('asset_class') if isinstance(ivol_srs_ls.index, pd.MultiIndex) else ivol_srs_ls
+    rc_comparison['iVol'] = rc_comparison['ticker'].map(ivol_by_ticker)
 
     # Add MDD placeholder (would need actual drawdown calculation)
     # For now, use a simple rolling max drawdown approximation
@@ -658,8 +659,8 @@ try:
             mdd_dict[ticker] = 0
     rc_comparison['MDD'] = rc_comparison['ticker'].map(mdd_dict)
 
-    # Reorder columns to match expected format
-    rc_comparison = rc_comparison[['ticker', 'RC', 'Corr. RC', 'Inh. RC', 'iVol', 'Risk Contribution', 'MDD']]
+    # Reorder columns to match paper Table 4: Ticker, RC, Inherent RC, Correlation RC, iVol, MDD
+    rc_comparison = rc_comparison[['ticker', 'RC', 'Inh. RC', 'Corr. RC', 'iVol', 'MDD']]
     rc_comparison.to_csv(os.path.join(output_dir, 'last_rc_comparison.csv'), index=False)
     logging.info(f"  Saved: {os.path.join(output_dir, 'last_rc_comparison.csv')}")
 

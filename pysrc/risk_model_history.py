@@ -51,9 +51,9 @@ def get_risk_metrics(pos_pnl_calc_df, position_date, lookback, run_date=None, ha
 
     # For figure generation, we only use minimal=True
     if minimal:
-        weighted_ivols_lag_adj = risk_calc.get_additive_ivol(pos_pnl_df, halflife=halflife, alpha=alpha, lead_adj=False, lag_adj=True, use_rank_corr=use_rank_corr)
+        rc_lag_adj_srs = risk_calc.get_rc(pos_pnl_df, halflife=halflife, alpha=alpha, lead_adj=False, lag_adj=True, use_rank_corr=use_rank_corr)
         risk_df = pd.DataFrame({
-            'ivol_lag_adj' : weighted_ivols_lag_adj,
+            'rc_lag_adj' : rc_lag_adj_srs,
         })
     else:
         # This branch is not used for figure generation
@@ -72,7 +72,7 @@ def get_risk_metrics_cur_pos(pos_pnl_calc_df, start_date, end_date='today', look
                                      halflife=None, alpha=0.99,
                                      yesterday_price_only=True,
                                      use_dv01_pnl_approx=False,
-                                     risk_column_names=['ivol_lag_adj'],
+                                     risk_column_names=['rc_lag_adj'],
                                      agg_col=None,
                                      hist_calc_freq_days=1, filter_func=None,
                                      index_cols=[], non_index_pnl_cols=[],
@@ -126,7 +126,7 @@ def get_risk_metrics_historical_pos(pos_pnl_calc_df, start_date, end_date='today
                                      halflife=None, alpha=0.99,
                                      yesterday_price_only=True,
                                      use_dv01_pnl_approx=False,
-                                     risk_column_names=['ivol_lag_adj'],
+                                     risk_column_names=['rc_lag_adj'],
                                      agg_col=None,
                                      index_cols=[],
                                      pnl_col='pnl_usd'):
@@ -156,7 +156,7 @@ def get_risk_metrics_historical_pos(pos_pnl_calc_df, start_date, end_date='today
     use_dv01_pnl_approx : bool
         Whether to use DV01 approximation for PnL (default False)
     risk_column_names : list
-        List of risk metric column names to include (default ['ivol_lag_adj'])
+        List of risk metric column names to include (default ['rc_lag_adj'])
     agg_col : str, optional
         Column to aggregate by (e.g., 'asset_class')
     index_cols : list

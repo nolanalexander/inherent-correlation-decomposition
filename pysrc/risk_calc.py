@@ -106,12 +106,55 @@ def weighted_cov(X, halflife=None, alpha=None, fillna_val=0, lead_adj=False, lag
 
     return port_cov_mat
 
-
-def get_vol_weight(pos_pnl_usd_df, halflife=None, alpha=None, port_cov_mat=None,
-                   position_ivols=None, universe=None, lead_adj=False, lag_adj=False, cov_contribution=False, port_vol=None,
-                   use_rank_corr=False):
+def get_ivol(pos_pnl_usd_df, halflife=None, alpha=None, lead_adj=False, lag_adj=False, use_rank_corr=False):
     """
-    For a given position pnl dataframe, compute the vol weight per asset, decomposed by vol and corr.
+    Compute non-additive Incremental Volatility (iVol) per asset.
+
+    iVol(a) = sigma_p - sigma_{p\\{a}}   (paper eq. 1)
+
+    where sigma_{p\\{a}} = sqrt(sigma_p^2 + Var(P_a) - 2*Cov(P_a, P_p)) is the
+    volatility of the portfolio with asset a removed. iVol does not sum to
+    portfolio volatility (see Appendix A of the paper).
+
+    Parameters
+    ----------
+    pos_pnl_usd_df : pd.DataFrame
+        Per-asset weighted PnL (one column per asset, one row per date).
+    halflife, alpha : float, optional
+        Exponential weighting parameters for the covariance estimate.
+    lead_adj, lag_adj : bool
+        Asynchronous-covariance adjustments (paper eq. 12).
+    use_rank_corr : bool
+        Use Spearman rank correlation when estimating covariance.
+
+    Returns
+    -------
+    pd.Series
+        iVol per asset, indexed by the columns of pos_pnl_usd_df.
+    """
+    pos_pnl_usd_df = pos_pnl_usd_df.astype(float)
+    port_cov_mat = weighted_cov(pos_pnl_usd_df, halflife=halflife, alpha=alpha,
+                                lead_adj=lead_adj, lag_adj=lag_adj, use_rank_corr=use_rank_corr)
+    port_vol = weighted_sd(pos_pnl_usd_df.sum(1), halflife=halflife, alpha=alpha)
+
+    pnl_cov_rowsum_srs = port_cov_mat.sum(axis=1)
+    asset_pnl_vol_srs = pd.Series(np.sqrt(np.diag(port_cov_mat)), index=port_cov_mat.index)
+    # sigma_{p\{a}} = sqrt(sigma_p^2 + Var(P_a) - 2 * Cov(P_a, P_p))
+    excl_port_vol_srs = np.sqrt(port_vol**2 + asset_pnl_vol_srs**2 - 2 * pnl_cov_rowsum_srs)
+    ivol_srs = port_vol - excl_port_vol_srs
+    return ivol_srs
+
+
+def get_rc_weight(pos_pnl_usd_df, halflife=None, alpha=None, port_cov_mat=None,
+                  universe=None, lead_adj=False, lag_adj=False, cov_contribution=False, port_vol=None,
+                  use_rank_corr=False):
+    """
+    For a given position pnl dataframe, compute each asset's share of portfolio
+    variance, decomposed into inherent and correlation parts (paper eq. 9):
+        weight_inh(a) = w_a^2 * sigma_a^2 / sigma_p^2
+        weight_cor(a) = w_a * (1 - w_a) * cov(r_a, r_{p\\{a}}) / sigma_p^2
+        weight(a)     = weight_inh(a) + weight_cor(a)
+    Multiplying weight(a) by sigma_p gives RC(a).
     """
     if universe is not None:
         pos_pnl_usd_df = pos_pnl_usd_df[universe].copy()
@@ -133,8 +176,8 @@ def get_vol_weight(pos_pnl_usd_df, halflife=None, alpha=None, port_cov_mat=None,
     asset_sds = pd.Series(np.sqrt(np.diag(port_cov_mat)), index=port_cov_mat.index)
 
     weights = pd.Series(index=pos_pnl_usd_df.columns, name='bloomberg_code_long')
-    weights_vol_part = pd.Series(index=pos_pnl_usd_df.columns, name='bloomberg_code_long')
-    weights_cor_part = pd.Series(index=pos_pnl_usd_df.columns, name='bloomberg_code_long')
+    weight_inh_srs = pd.Series(index=pos_pnl_usd_df.columns, name='bloomberg_code_long')
+    weight_cor_srs = pd.Series(index=pos_pnl_usd_df.columns, name='bloomberg_code_long')
 
     for col in asset_sds.index[asset_sds.notna()]:
         cur_pos_pnl = pos_pnl_usd_df[col].fillna(0)
@@ -145,45 +188,54 @@ def get_vol_weight(pos_pnl_usd_df, halflife=None, alpha=None, port_cov_mat=None,
         cov = excl_and_port_cov_mat.iloc[0,1]
         asset_excluded_sd = asset_sds[col]
 
-        weights_vol_part[col] = asset_excluded_sd**2 / port_vol**2
-        weights_cor_part[col] = cov / port_vol**2
-        weights[col] = weights_vol_part[col] + weights_cor_part[col]
+        weight_inh_srs[col] = asset_excluded_sd**2 / port_vol**2
+        weight_cor_srs[col] = cov / port_vol**2
+        weights[col] = weight_inh_srs[col] + weight_cor_srs[col]
 
     weights_df = pd.DataFrame({
         'weight' : weights,
-        'weight_vol_part' : weights_vol_part,
-        'weight_cor_part' : weights_cor_part,
+        'weight_inh_part' : weight_inh_srs,
+        'weight_cor_part' : weight_cor_srs,
     })
 
     return weights_df
 
 
-def get_additive_ivol(pos_pnl_usd_df, halflife=None, alpha=None,
-                      position_ivols=None, universe=None, lead_adj=False, lag_adj=False, cov_contribution=False,
-                      use_rank_corr=False):
-    """Calculate additive risk contribution."""
+def get_rc(pos_pnl_usd_df, halflife=None, alpha=None,
+           universe=None, lead_adj=False, lag_adj=False, cov_contribution=False,
+           use_rank_corr=False):
+    """
+    Compute additive Risk Contribution (RC) per asset (paper eq. 7):
+        RC(a) = (w_a^2 * sigma_a^2 + w_a * (1 - w_a) * cov(r_a, r_{p\\{a}})) / sigma_p
+    Sum of RC(a) over assets equals portfolio volatility sigma_p.
+    """
     pos_pnl_usd_df = pos_pnl_usd_df.astype(float)
     port_cov_mat = weighted_cov(pos_pnl_usd_df, halflife=halflife, alpha=alpha, lead_adj=lead_adj, lag_adj=lag_adj, use_rank_corr=use_rank_corr)
     port_vol = weighted_sd(pos_pnl_usd_df.sum(1), halflife=halflife, alpha=alpha)
 
-    weight_df = get_vol_weight(pos_pnl_usd_df, port_cov_mat=port_cov_mat,
-                               halflife=halflife, alpha=alpha,  position_ivols=position_ivols, universe=universe,
-                               lead_adj=lead_adj, lag_adj=lag_adj, cov_contribution=cov_contribution, port_vol=port_vol)
+    weight_df = get_rc_weight(pos_pnl_usd_df, port_cov_mat=port_cov_mat,
+                              halflife=halflife, alpha=alpha, universe=universe,
+                              lead_adj=lead_adj, lag_adj=lag_adj, cov_contribution=cov_contribution, port_vol=port_vol)
 
-    ivols = port_vol * weight_df['weight']
-    logging.debug('ivols: \n' + str(ivols.head()))
-    return ivols
+    rc_srs = port_vol * weight_df['weight']
+    logging.debug('rc_srs: \n' + str(rc_srs.head()))
+    return rc_srs
 
 
-def get_additive_ivol_parts(pos_pnl_usd_df, halflife=None, alpha=None, cov_contribution=False, lead_adj=False, lag_adj=False,
-                            use_rank_corr=False):
-    """Calculate inherent and correlation parts of risk contribution."""
+def get_rc_parts(pos_pnl_usd_df, halflife=None, alpha=None, cov_contribution=False, lead_adj=False, lag_adj=False,
+                 use_rank_corr=False):
+    """
+    Decompose RC into its inherent and correlation components (paper eq. 9):
+        RC_inh(a)  = w_a^2 * sigma_a^2 / sigma_p
+        RC_corr(a) = w_a * (1 - w_a) * cov(r_a, r_{p\\{a}}) / sigma_p
+    Returns (rc_inh_srs, rc_corr_srs); both sum (component-wise) to RC.
+    """
     port_cov_mat = weighted_cov(pos_pnl_usd_df, halflife=halflife, alpha=alpha, lead_adj=lead_adj, lag_adj=lag_adj,
                                 use_rank_corr=use_rank_corr)
     port_vol = weighted_sd(pos_pnl_usd_df.sum(1), halflife=halflife, alpha=alpha)
 
-    weight_df = get_vol_weight(pos_pnl_usd_df, port_cov_mat=port_cov_mat, halflife=halflife, alpha=alpha,
-                               lead_adj=lead_adj, lag_adj=lag_adj, cov_contribution=cov_contribution)
-    ivols_vol_part = weight_df['weight_vol_part'] * port_vol
-    ivols_cor_part = weight_df['weight_cor_part'] * port_vol
-    return ivols_vol_part, ivols_cor_part
+    weight_df = get_rc_weight(pos_pnl_usd_df, port_cov_mat=port_cov_mat, halflife=halflife, alpha=alpha,
+                              lead_adj=lead_adj, lag_adj=lag_adj, cov_contribution=cov_contribution)
+    rc_inh_srs = weight_df['weight_inh_part'] * port_vol
+    rc_corr_srs = weight_df['weight_cor_part'] * port_vol
+    return rc_inh_srs, rc_corr_srs
